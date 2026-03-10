@@ -21,8 +21,8 @@ def get_memory_stats():
         result = subprocess.run(
             ["docker", "stats", "--no-stream", "--format",
              "{{.Container}},{{.MemUsage}}",
-             "dapr-multi-app-testing-chunk-sender-dapr-1",
-             "dapr-multi-app-testing-chunk-receiver-dapr-1"],
+             "dapr-large-file-streaming-chunk-sender-dapr-1",
+             "dapr-large-file-streaming-chunk-receiver-dapr-1"],
             capture_output=True,
             text=True,
             timeout=5

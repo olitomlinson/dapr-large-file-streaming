@@ -22,8 +22,8 @@ def get_memory_stats():
         result = subprocess.run(
             ["docker", "stats", "--no-stream", "--format",
              "{{.Container}},{{.MemUsage}}",
-             "dapr-multi-app-testing-chunk-sender-dapr-1",
-             "dapr-multi-app-testing-chunk-receiver-dapr-1"],
+             "dapr-large-file-streaming-chunk-sender-dapr-1",
+             "dapr-large-file-streaming-chunk-receiver-dapr-1"],
             capture_output=True,
             text=True,
             timeout=5
@@ -81,7 +81,7 @@ async def run_1gb_test():
     print("Cleaning up previous test file...")
     try:
         subprocess.run(
-            ["docker", "exec", "dapr-multi-app-testing-chunk-receiver-1",
+            ["docker", "exec", "dapr-large-file-streaming-chunk-receiver-1",
              "rm", "-f", "/tmp/received_chunks.bin"],
             capture_output=True,
             timeout=5
@@ -139,7 +139,7 @@ async def run_1gb_test():
         print("=== File Verification ===")
         try:
             file_check = subprocess.run(
-                ["docker", "exec", "dapr-multi-app-testing-chunk-receiver-1",
+                ["docker", "exec", "dapr-large-file-streaming-chunk-receiver-1",
                  "stat", "-c%s", "/tmp/received_chunks.bin"],
                 capture_output=True,
                 text=True,

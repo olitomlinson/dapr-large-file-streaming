@@ -29,8 +29,8 @@ monitor_memory() {
     while [ $(date +%s) -lt $end_time ]; do
         timestamp=$(date +%s.%N)
         stats=$(docker stats --no-stream --format "{{.Container}},{{.MemUsage}}" \
-            dapr-multi-app-testing-chunk-sender-dapr-1 \
-            dapr-multi-app-testing-chunk-receiver-dapr-1 2>/dev/null || echo "error")
+            dapr-large-file-streaming-chunk-sender-dapr-1 \
+            dapr-large-file-streaming-chunk-receiver-dapr-1 2>/dev/null || echo "error")
 
         if [ "$stats" != "error" ]; then
             caller=$(echo "$stats" | grep chunk-sender-dapr | cut -d',' -f2 | sed 's/MiB.*//' | xargs)
@@ -71,20 +71,20 @@ run_transfer() {
 # Cleanup
 echo "Cleaning up any existing files..."
 for i in $(seq 1 $NUM_CONCURRENT); do
-    docker exec dapr-multi-app-testing-chunk-receiver-1 rm -f /tmp/received_chunks_${i}.bin 2>/dev/null || true
+    docker exec dapr-large-file-streaming-chunk-receiver-1 rm -f /tmp/received_chunks_${i}.bin 2>/dev/null || true
 done
-docker exec dapr-multi-app-testing-chunk-receiver-1 rm -f /tmp/received_chunks.bin 2>/dev/null || true
+docker exec dapr-large-file-streaming-chunk-receiver-1 rm -f /tmp/received_chunks.bin 2>/dev/null || true
 
 echo ""
 echo "=== Baseline Memory Usage ==="
 docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}" \
-    dapr-multi-app-testing-chunk-sender-dapr-1 \
-    dapr-multi-app-testing-chunk-receiver-dapr-1
+    dapr-large-file-streaming-chunk-sender-dapr-1 \
+    dapr-large-file-streaming-chunk-receiver-dapr-1
 
 baseline_caller=$(docker stats --no-stream --format "{{.MemUsage}}" \
-    dapr-multi-app-testing-chunk-sender-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
+    dapr-large-file-streaming-chunk-sender-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
 baseline_receiver=$(docker stats --no-stream --format "{{.MemUsage}}" \
-    dapr-multi-app-testing-chunk-receiver-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
+    dapr-large-file-streaming-chunk-receiver-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
 
 echo ""
 echo "Starting memory monitor (30 second window)..."
@@ -203,8 +203,8 @@ echo ""
 echo "=== Final Memory Usage ==="
 sleep 2
 docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}\t{{.CPUPerc}}" \
-    dapr-multi-app-testing-chunk-sender-dapr-1 \
-    dapr-multi-app-testing-chunk-receiver-dapr-1
+    dapr-large-file-streaming-chunk-sender-dapr-1 \
+    dapr-large-file-streaming-chunk-receiver-dapr-1
 
 echo ""
 echo "Memory log saved to: /tmp/concurrent_memory_log.csv"

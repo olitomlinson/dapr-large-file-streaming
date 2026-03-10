@@ -17,7 +17,7 @@ echo ""
 # Function to cleanup test file
 cleanup() {
     echo "Cleaning up test file..."
-    docker exec dapr-multi-app-testing-chunk-receiver-1 rm -f $RECEIVER_FILE || true
+    docker exec dapr-large-file-streaming-chunk-receiver-1 rm -f $RECEIVER_FILE || true
 }
 
 # Function to check file size
@@ -26,9 +26,9 @@ check_file() {
     echo ""
     echo "Checking received file..."
 
-    if docker exec dapr-multi-app-testing-chunk-receiver-1 test -f $RECEIVER_FILE; then
-        actual_size=$(docker exec dapr-multi-app-testing-chunk-receiver-1 stat -f%z $RECEIVER_FILE 2>/dev/null || \
-                     docker exec dapr-multi-app-testing-chunk-receiver-1 stat -c%s $RECEIVER_FILE 2>/dev/null)
+    if docker exec dapr-large-file-streaming-chunk-receiver-1 test -f $RECEIVER_FILE; then
+        actual_size=$(docker exec dapr-large-file-streaming-chunk-receiver-1 stat -f%z $RECEIVER_FILE 2>/dev/null || \
+                     docker exec dapr-large-file-streaming-chunk-receiver-1 stat -c%s $RECEIVER_FILE 2>/dev/null)
         echo "  File exists: $RECEIVER_FILE"
         echo "  Expected size: $expected_size bytes"
         echo "  Actual size: $actual_size bytes"
@@ -83,7 +83,7 @@ echo "=== Test 2: 100MB Payload via Dapr ==="
 echo "This tests chunked transfer with the full 100MB payload"
 echo ""
 echo "NOTE: Monitor memory usage in another terminal with:"
-echo "  docker stats --no-stream dapr-multi-app-testing-chunk-sender-dapr-1 dapr-multi-app-testing-chunk-receiver-dapr-1"
+echo "  docker stats --no-stream dapr-large-file-streaming-chunk-sender-dapr-1 dapr-large-file-streaming-chunk-receiver-dapr-1"
 echo ""
 
 cleanup
