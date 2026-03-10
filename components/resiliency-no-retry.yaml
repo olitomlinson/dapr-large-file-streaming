@@ -16,4 +16,4 @@ spec:
         retry: noRetries
 
 scopes:
-- sse-proxy
+- chunk-sender

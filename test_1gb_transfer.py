@@ -22,7 +22,7 @@ def get_memory_stats():
         result = subprocess.run(
             ["docker", "stats", "--no-stream", "--format",
              "{{.Container}},{{.MemUsage}}",
-             "dapr-multi-app-testing-sse-proxy-dapr-1",
+             "dapr-multi-app-testing-chunk-sender-dapr-1",
              "dapr-multi-app-testing-chunk-receiver-dapr-1"],
             capture_output=True,
             text=True,
@@ -33,7 +33,7 @@ def get_memory_stats():
         stats = {}
 
         for line in lines:
-            if 'sse-proxy-dapr' in line:
+            if 'chunk-sender-dapr' in line:
                 mem = line.split(',')[1].split('MiB')[0].strip()
                 stats['caller'] = float(mem)
             elif 'chunk-receiver-dapr' in line:
@@ -73,7 +73,7 @@ async def run_1gb_test():
     print("=== Baseline Memory Usage ===")
     await asyncio.sleep(2)  # Let things settle
     baseline = get_memory_stats()
-    print(f"  Caller (sse-proxy-dapr): {baseline['caller']:.2f} MiB")
+    print(f"  Caller (chunk-sender-dapr): {baseline['caller']:.2f} MiB")
     print(f"  Receiver (chunk-receiver-dapr): {baseline['receiver']:.2f} MiB")
     print()
 
@@ -180,7 +180,7 @@ async def run_1gb_test():
 
         print("=== Memory Analysis ===")
         print()
-        print("Caller (sse-proxy-dapr):")
+        print("Caller (chunk-sender-dapr):")
         print(f"  Baseline: {baseline['caller']:.2f} MiB")
         print(f"  Peak: {max_caller:.2f} MiB (at {peak_caller_time:.1f}s)")
         print(f"  Increase: {caller_increase:.2f} MiB")

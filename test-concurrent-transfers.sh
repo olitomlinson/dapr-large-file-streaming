@@ -29,11 +29,11 @@ monitor_memory() {
     while [ $(date +%s) -lt $end_time ]; do
         timestamp=$(date +%s.%N)
         stats=$(docker stats --no-stream --format "{{.Container}},{{.MemUsage}}" \
-            dapr-multi-app-testing-sse-proxy-dapr-1 \
+            dapr-multi-app-testing-chunk-sender-dapr-1 \
             dapr-multi-app-testing-chunk-receiver-dapr-1 2>/dev/null || echo "error")
 
         if [ "$stats" != "error" ]; then
-            caller=$(echo "$stats" | grep sse-proxy-dapr | cut -d',' -f2 | sed 's/MiB.*//' | xargs)
+            caller=$(echo "$stats" | grep chunk-sender-dapr | cut -d',' -f2 | sed 's/MiB.*//' | xargs)
             receiver=$(echo "$stats" | grep chunk-receiver-dapr | cut -d',' -f2 | sed 's/MiB.*//' | xargs)
 
             echo "$timestamp,$caller,$receiver" >> "$output_file"
@@ -78,11 +78,11 @@ docker exec dapr-multi-app-testing-chunk-receiver-1 rm -f /tmp/received_chunks.b
 echo ""
 echo "=== Baseline Memory Usage ==="
 docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}" \
-    dapr-multi-app-testing-sse-proxy-dapr-1 \
+    dapr-multi-app-testing-chunk-sender-dapr-1 \
     dapr-multi-app-testing-chunk-receiver-dapr-1
 
 baseline_caller=$(docker stats --no-stream --format "{{.MemUsage}}" \
-    dapr-multi-app-testing-sse-proxy-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
+    dapr-multi-app-testing-chunk-sender-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
 baseline_receiver=$(docker stats --no-stream --format "{{.MemUsage}}" \
     dapr-multi-app-testing-chunk-receiver-dapr-1 | cut -d'M' -f1 | cut -d'i' -f1)
 
@@ -167,7 +167,7 @@ caller_increase=$(echo "$max_caller - $baseline_caller" | bc)
 receiver_increase=$(echo "$max_receiver - $baseline_receiver" | bc)
 
 echo ""
-echo "Caller (sse-proxy-dapr):"
+echo "Caller (chunk-sender-dapr):"
 echo "  Baseline: ${baseline_caller} MiB"
 echo "  Peak: ${max_caller} MiB"
 echo "  Increase: ${caller_increase} MiB"
@@ -203,7 +203,7 @@ echo ""
 echo "=== Final Memory Usage ==="
 sleep 2
 docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}\t{{.CPUPerc}}" \
-    dapr-multi-app-testing-sse-proxy-dapr-1 \
+    dapr-multi-app-testing-chunk-sender-dapr-1 \
     dapr-multi-app-testing-chunk-receiver-dapr-1
 
 echo ""
