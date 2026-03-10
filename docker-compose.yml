@@ -1,0 +1,345 @@
+version: "3.4"
+services:
+  postgres-db:
+    image: postgres:16.2-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=wO2VGDsMKR
+      - max_wal_size=2GB
+    ports:
+      - "5432:5432"
+    networks:
+      - network
+    volumes:
+      - postgres-db-16-2:/var/lib/postgresql/data-16-2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  ############################
+  # API App + Dapr sidecar
+  ############################
+  api:
+    environment:
+      - DAPR_GRPC_ENDPOINT=http://api-dapr:50001
+      - DAPR_HTTP_ENDPOINT=http://api-dapr:3500
+      - REGISTER_WORKFLOWS=true
+      - REGISTER_ACTIVITIES=true
+    build:
+      context: .
+      dockerfile: dotnet/Dockerfile
+    ports:
+      - "5111:5111"
+      - "7776:7776"
+    depends_on:
+      api-dapr:
+        condition: service_started
+    networks:
+      - network
+  api-dapr:
+    image: "${DAPR_RUNTIME_VERSION}"
+    ports:
+      - "3500:3500" # only important so we can reach the Dapr HTTP sidecar from the host for testing purposes
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "api",
+        "-app-channel-address",
+        "api",
+        "-app-port",
+        "5111",
+        "-dapr-http-port",
+        "3500",
+        "-dapr-grpc-port",
+        "50001",
+        "-placement-host-address",
+        "placement:50005",
+        "-scheduler-host-address",
+        "scheduler-0:50006",
+        "-resources-path",
+        "/components",
+        "-config",
+        "/dapr-config/config.yml",
+        "-log-level",
+        "info",
+      ]
+    volumes:
+      - "./components/:/components"
+      - "./dapr-config/:/dapr-config"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      placement:
+        condition: service_started
+      scheduler-0:
+        condition: service_started
+    networks:
+      - network
+
+  ############################
+  # Semantic Search App + Dapr sidecar
+  ############################
+  # semantic-search:
+  #   environment:
+  #     - DAPR_GRPC_ENDPOINT=http://semantic-search-dapr:50001
+  #     - DAPR_HTTP_ENDPOINT=http://semantic-search-dapr:3500
+  #     - REGISTER_WORKFLOWS=false
+  #     - REGISTER_ACTIVITIES=true
+  #   build:
+  #     context: ./python
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   networks:
+  #     - network
+  # semantic-search-dapr:
+  #   image: "${DAPR_RUNTIME_VERSION}"
+  #   ports:
+  #     - "3501:3500" # Dapr HTTP port (different from workflow-a)
+  #     - "50002:50001" # Dapr gRPC port (different from workflow-a)
+  #   command:
+  #     [
+  #       "./daprd",
+  #       "-app-id",
+  #       "semantic-search",
+  #       "-app-channel-address",
+  #       "semantic-search",
+  #       "-app-port",
+  #       "8000",
+  #       "-dapr-http-port",
+  #       "3500",
+  #       "-dapr-grpc-port",
+  #       "50001",
+  #       "-placement-host-address",
+  #       "placement:50005",
+  #       "-scheduler-host-address",
+  #       "scheduler-0:50006",
+  #       "-resources-path",
+  #       "/components",
+  #       "-config",
+  #       "/dapr-config/config.yml",
+  #       "-log-level",
+  #       "info",
+  #     ]
+  #   volumes:
+  #     - "./components/:/components"
+  #     - "./dapr-config/:/dapr-config"
+  #   depends_on:
+  #     postgres-db:
+  #       condition: service_healthy
+  #     placement:
+  #       condition: service_started
+  #     scheduler-0:
+  #       condition: service_started
+  #   healthcheck:
+  #     test:
+  #       ["CMD", "wget", "-q", "--spider", "http://localhost:3500/v1.0/healthz"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - network
+
+  ############################
+  # SSE Proxy App + Dapr sidecar
+  ############################
+  sse-proxy:
+    environment:
+      - DAPR_GRPC_ENDPOINT=http://sse-proxy-dapr:50001
+      - DAPR_HTTP_ENDPOINT=http://sse-proxy-dapr:3500
+      - API_DIRECT_ENDPOINT=http://api:5111
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    depends_on:
+      sse-proxy-dapr:
+        condition: service_started
+    networks:
+      - network
+  sse-proxy-dapr:
+    image: "${DAPR_RUNTIME_VERSION}"
+    ports:
+      - "3502:3500" # Dapr HTTP port
+      - "50003:50001" # Dapr gRPC port
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "sse-proxy",
+        "-app-channel-address",
+        "sse-proxy",
+        "-app-port",
+        "8001",
+        "-dapr-http-port",
+        "3500",
+        "-dapr-grpc-port",
+        "50001",
+        "-placement-host-address",
+        "placement:50005",
+        "-scheduler-host-address",
+        "scheduler-0:50006",
+        "-resources-path",
+        "/components",
+        "-config",
+        "/dapr-config/config.yml",
+        "-log-level",
+        "info",
+        "-max-body-size",
+        "128Mi",
+      ]
+    volumes:
+      - "./components/:/components"
+      - "./dapr-config/:/dapr-config"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      placement:
+        condition: service_started
+      scheduler-0:
+        condition: service_started
+    networks:
+      - network
+
+  ############################
+  # Chunk Receiver App + Dapr sidecar
+  ############################
+  chunk-receiver:
+    environment:
+      - DAPR_GRPC_ENDPOINT=http://chunk-receiver-dapr:50001
+      - DAPR_HTTP_ENDPOINT=http://chunk-receiver-dapr:3500
+    build:
+      context: ./chunk-receiver
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    depends_on:
+      chunk-receiver-dapr:
+        condition: service_started
+    networks:
+      - network
+    volumes:
+      - /tmp:/tmp # Mount /tmp for file writing
+  chunk-receiver-dapr:
+    image: "${DAPR_RUNTIME_VERSION}"
+    ports:
+      - "3503:3500" # Dapr HTTP port
+      - "50004:50001" # Dapr gRPC port
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "chunk-receiver",
+        "-app-channel-address",
+        "chunk-receiver",
+        "-app-port",
+        "8002",
+        "-dapr-http-port",
+        "3500",
+        "-dapr-grpc-port",
+        "50001",
+        "-placement-host-address",
+        "placement:50005",
+        "-scheduler-host-address",
+        "scheduler-0:50006",
+        "-resources-path",
+        "/components",
+        "-config",
+        "/dapr-config/config.yml",
+        "-log-level",
+        "info",
+        "-max-body-size",
+        "128Mi",
+      ]
+    volumes:
+      - "./components/:/components"
+      - "./dapr-config/:/dapr-config"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      placement:
+        condition: service_started
+      scheduler-0:
+        condition: service_started
+    networks:
+      - network
+
+  ############################
+  # Dapr placement service
+  ############################
+  placement:
+    image: "${DAPR_PLACEMENT_VERSION}"
+    command: ["./placement", "-port", "50005", "-log-level", "warn"]
+    networks:
+      - network
+    ports:
+      - "50005:50005"
+
+  # ############################
+  # # Dapr Scheduler service
+  # ############################
+  scheduler-0:
+    image: "${DAPR_SCHEDULER_VERSION}"
+    command:
+      [
+        "./scheduler",
+        "--id",
+        "scheduler-0",
+        "--listen-address",
+        "0.0.0.0",
+        "--etcd-data-dir",
+        "/var/run/dapr/scheduler",
+        "--etcd-initial-cluster",
+        "scheduler-0=http://scheduler-0:2380",
+        "--port",
+        "50006",
+        "--override-broadcast-host-port",
+        "scheduler-0:50006",
+      ]
+    volumes:
+      - ./dapr_scheduler/0:/var/run/dapr/scheduler
+    networks:
+      - network
+    ports:
+      - "50006:50006"
+      - "2380:2380"
+
+  workflow-dashboard:
+    image: ghcr.io/diagridio/diagrid-dashboard:latest
+    restart: always
+    environment:
+      - COMPONENT_FILE=/app/components/custom_state.yaml
+    ports:
+      - 8081:8080
+    networks:
+      - network
+    volumes:
+      - "./components/statestore-pg-v2.yaml:/app/components/custom_state.yaml"
+
+  ############################
+  # Web UI for SSE Testing
+  ############################
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    networks:
+      - network
+
+networks:
+  network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  postgres-db-16-2:
+    driver: local
