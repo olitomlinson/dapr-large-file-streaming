@@ -192,7 +192,7 @@ services:
         "-log-level",
         "info",
         "-max-body-size",
-        "128Mi",
+        "2Gi",
       ]
     volumes:
       - "./components/:/components"
@@ -255,7 +255,7 @@ services:
         "-log-level",
         "info",
         "-max-body-size",
-        "128Mi",
+        "2Gi",
       ]
     volumes:
       - "./components/:/components"

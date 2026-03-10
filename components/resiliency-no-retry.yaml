@@ -1,0 +1,19 @@
+apiVersion: dapr.io/v1alpha1
+kind: Resiliency
+metadata:
+  name: chunk-transfer-no-retry
+spec:
+  policies:
+    retries:
+      noRetries:
+        policy: constant
+        maxRetries: 0
+        duration: 0s
+
+  targets:
+    apps:
+      chunk-receiver:
+        retry: noRetries
+
+scopes:
+- sse-proxy
