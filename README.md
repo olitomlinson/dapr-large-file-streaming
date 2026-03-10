@@ -5,8 +5,11 @@ Comprehensive analysis and test suite for HTTP chunked transfer encoding through
 ## Quick Summary
 
 ✅ **Dapr DOES support true streaming of large files**
+
 ✅ **Key requirement: No-retry resiliency policy (maxRetries: 0)**
+
 ✅ **Configuration: Single resiliency YAML file**
+
 ✅ **Results: 99%+ memory reduction vs default behavior**
 
 ## Configuration (Simple)
