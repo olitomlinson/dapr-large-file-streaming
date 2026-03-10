@@ -14,7 +14,7 @@ This directory contains a comprehensive test suite and analysis of Dapr's suppor
 ### 1. Start Services
 
 ```bash
-docker-compose up -d chunk-receiver chunk-receiver-dapr sse-proxy sse-proxy-dapr
+docker-compose up -d chunk-receiver chunk-receiver-dapr chunk-sender chunk-sender-dapr
 ```
 
 ### 2. Test Chunked Transfer
@@ -30,7 +30,7 @@ curl -X POST http://localhost:8001/test-chunked-transfer \
 
 ```bash
 # Watch memory usage during transfer
-watch -n 1 'docker stats --no-stream dapr-multi-app-testing-sse-proxy-dapr-1'
+watch -n 1 'docker stats --no-stream dapr-multi-app-testing-chunk-sender-dapr-1'
 ```
 
 ## Test Results
@@ -70,10 +70,10 @@ watch -n 1 'docker stats --no-stream dapr-multi-app-testing-sse-proxy-dapr-1'
 ```
 Client
   ↓ POST /test-chunked-transfer
-sse-proxy (FastAPI)
+chunk-sender (FastAPI)
   ↓ Generates chunks with os.urandom()
   ↓ Streams via httpx
-sse-proxy-dapr
+chunk-sender-dapr
   ↓ WITH retries: buffers ~220 MiB for 100MB
   ↓ NO retries: streams with ~17 MiB overhead
   ↓ Dapr service invocation
@@ -90,7 +90,7 @@ chunk-receiver (FastAPI)
 
 **File:** `docker-compose.yml`
 
-Add to both `sse-proxy-dapr` and `chunk-receiver-dapr`:
+Add to both `chunk-sender-dapr` and `chunk-receiver-dapr`:
 
 ```yaml
 command:
@@ -125,17 +125,17 @@ spec:
         retry: noRetries
 
 scopes:
-- sse-proxy
+- chunk-sender
 ```
 
 Apply changes:
 ```bash
-docker-compose restart sse-proxy-dapr chunk-receiver-dapr
+docker-compose restart chunk-sender-dapr chunk-receiver-dapr
 ```
 
 ## Services
 
-### Sender: sse-proxy
+### Sender: chunk-sender
 - **Port:** 8001
 - **Endpoint:** `POST /test-chunked-transfer`
 - **Function:** Generates binary data and streams to receiver
@@ -173,7 +173,7 @@ curl -X POST http://localhost:8001/test-chunked-transfer \
 docker exec dapr-multi-app-testing-chunk-receiver-1 ls -lh /tmp/received_chunks.bin
 
 # Check memory
-docker stats --no-stream | grep -E '(sse-proxy-dapr|chunk-receiver-dapr)'
+docker stats --no-stream | grep -E '(chunk-sender-dapr|chunk-receiver-dapr)'
 ```
 
 ## Documentation
@@ -285,7 +285,7 @@ docker exec chunk-receiver-1 stat -c%s /tmp/received_chunks.bin
 
 **Verify buffering is fixed:** Restart sidecar and re-test:
 ```bash
-docker restart dapr-multi-app-testing-sse-proxy-dapr-1
+docker restart dapr-multi-app-testing-chunk-sender-dapr-1
 # Wait, then run test and check memory increase
 ```
 
