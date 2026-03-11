@@ -161,6 +161,135 @@ services:
     networks:
       - network
 
+  ############################
+  # Frontend - Static web server
+  ############################
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    networks:
+      - network
+
+  ############################
+  # nginx - API Gateway / Reverse proxy
+  ############################
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      nginx-dapr:
+        condition: service_started
+    networks:
+      - network
+
+  nginx-dapr:
+    image: "${DAPR_RUNTIME_VERSION}"
+    ports:
+      - "3504:3500" # Dapr HTTP port (for debugging)
+      - "50007:50001" # Dapr gRPC port
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "nginx",
+        "-app-channel-address",
+        "nginx",
+        "-app-port",
+        "80",
+        "-dapr-http-port",
+        "3500",
+        "-dapr-grpc-port",
+        "50001",
+        "-placement-host-address",
+        "placement:50005",
+        "-scheduler-host-address",
+        "scheduler-0:50006",
+        "-resources-path",
+        "/components",
+        "-config",
+        "/dapr-config/config.yml",
+        "-log-level",
+        "info",
+        "-max-body-size",
+        "2Gi",
+      ]
+    volumes:
+      - "./components/:/components"
+      - "./dapr-config/:/dapr-config"
+    depends_on:
+      placement:
+        condition: service_started
+      scheduler-0:
+        condition: service_started
+    networks:
+      - network
+
+  ############################
+  # File Generator - Generates large files for download
+  ############################
+  file-generator:
+    environment:
+      - DAPR_GRPC_ENDPOINT=http://file-generator-dapr:50001
+      - DAPR_HTTP_ENDPOINT=http://file-generator-dapr:3500
+    build:
+      context: ./file-generator
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    depends_on:
+      file-generator-dapr:
+        condition: service_started
+    networks:
+      - network
+
+  file-generator-dapr:
+    image: "${DAPR_RUNTIME_VERSION}"
+    ports:
+      - "3505:3500" # Dapr HTTP port (for debugging)
+      - "50008:50001" # Dapr gRPC port
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "file-generator",
+        "-app-channel-address",
+        "file-generator",
+        "-app-port",
+        "8003",
+        "-dapr-http-port",
+        "3500",
+        "-dapr-grpc-port",
+        "50001",
+        "-placement-host-address",
+        "placement:50005",
+        "-scheduler-host-address",
+        "scheduler-0:50006",
+        "-resources-path",
+        "/components",
+        "-config",
+        "/dapr-config/config.yml",
+        "-log-level",
+        "info",
+        "-max-body-size",
+        "2Gi",
+      ]
+    volumes:
+      - "./components/:/components"
+      - "./dapr-config/:/dapr-config"
+    depends_on:
+      placement:
+        condition: service_started
+      scheduler-0:
+        condition: service_started
+    networks:
+      - network
+
 networks:
   network:
     driver: bridge
