@@ -37,6 +37,31 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+def parse_memory_value(mem_string: str) -> float:
+    """
+    Parse Docker memory string to MiB float.
+    Handles formats like '2.184GiB / 15.6GiB' or '512MiB / 2GiB'.
+    Returns the used memory (first value) converted to MiB.
+    """
+    try:
+        # Extract the used memory (before '/')
+        used = mem_string.split('/')[0].strip()
+
+        # Extract numeric value and unit
+        if 'GiB' in used:
+            value = float(used.replace('GiB', '').strip())
+            return value * 1024  # Convert GiB to MiB
+        elif 'MiB' in used:
+            value = float(used.replace('MiB', '').strip())
+            return value
+        else:
+            # Fallback for unexpected format
+            logger.warning(f"Unexpected memory format: {mem_string}")
+            return 0.0
+    except Exception as e:
+        logger.error(f"Failed to parse memory value '{mem_string}': {e}")
+        return 0.0
+
 @app.get("/memory-stats")
 async def memory_stats():
     """
@@ -62,18 +87,16 @@ async def memory_stats():
         for line in lines:
             if not line:
                 continue
+            mem_string = line.split(',')[1].strip() if ',' in line else ''
+
             if 'nginx-1' in line and 'nginx-dapr' not in line:
-                mem = line.split(',')[1].split('MiB')[0].strip()
-                stats['nginx'] = float(mem)
+                stats['nginx'] = parse_memory_value(mem_string)
             elif 'nginx-dapr-1' in line:
-                mem = line.split(',')[1].split('MiB')[0].strip()
-                stats['nginx_dapr'] = float(mem)
+                stats['nginx_dapr'] = parse_memory_value(mem_string)
             elif 'file-generator-1' in line and 'file-generator-dapr' not in line:
-                mem = line.split(',')[1].split('MiB')[0].strip()
-                stats['file_generator'] = float(mem)
+                stats['file_generator'] = parse_memory_value(mem_string)
             elif 'file-generator-dapr-1' in line:
-                mem = line.split(',')[1].split('MiB')[0].strip()
-                stats['file_generator_dapr'] = float(mem)
+                stats['file_generator_dapr'] = parse_memory_value(mem_string)
 
         return JSONResponse(content={
             "success": True,
