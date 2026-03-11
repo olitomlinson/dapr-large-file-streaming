@@ -147,8 +147,6 @@ services:
         "/dapr-config/config.yml",
         "-log-level",
         "info",
-        "-max-body-size",
-        "2Gi",
       ]
     volumes:
       - "./components/:/components"
@@ -243,7 +241,7 @@ services:
     ports:
       - "8003:8003"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only Docker socket access for memory monitoring
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Read-only Docker socket access for memory monitoring
     depends_on:
       file-generator-dapr:
         condition: service_started
