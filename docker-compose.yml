@@ -125,8 +125,7 @@ services:
     ports:
       - "3503:3500" # Dapr HTTP port
       - "50004:50001" # Dapr gRPC port
-    command:
-      [
+    command: [
         "./daprd",
         "-app-id",
         "chunk-receiver",
@@ -142,8 +141,8 @@ services:
         "placement:50005",
         "-scheduler-host-address",
         "scheduler-0:50006",
-        "-resources-path",
-        "/components",
+        # "-resources-path",
+        # "/components",
         "-config",
         "/dapr-config/config.yml",
         "-log-level",
