@@ -30,12 +30,17 @@
             <div id="progress-fill" class="progress-fill"></div>
         </div>
 
+        <div id="memory-stats" class="memory-stats">
+            <p style="color: #666; font-style: italic;">Memory stats will appear here during download...</p>
+        </div>
+
         <div class="info">
             <h3>Architecture</h3>
             <pre>Browser → frontend:8080 (static)
         ↓ (API call)
 Browser → nginx:80 → nginx-dapr:3500 → file-generator-dapr:3500 → file-generator:8003</pre>
             <p>The entire API chain uses chunked transfer-encoding without buffering.</p>
+            <p><strong>Note:</strong> file-generator-dapr buffers the entire response (~300% overhead). See STREAMING_RESPONSE_ISSUE.md for details.</p>
         </div>
     </div>
 
