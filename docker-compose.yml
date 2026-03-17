@@ -1,46 +1,6 @@
 version: "3.4"
 services:
   ############################
-  # Dapr Placement Service - Required by Dapr
-  ############################
-  placement:
-    image: "${DAPR_PLACEMENT_VERSION}"
-    command: ["./placement", "-port", "50005", "-log-level", "warn"]
-    networks:
-      - network
-    ports:
-      - "50005:50005"
-
-  ############################
-  # Dapr Scheduler Service - Required by Dapr
-  ############################
-  scheduler-0:
-    image: "${DAPR_SCHEDULER_VERSION}"
-    command:
-      [
-        "./scheduler",
-        "--id",
-        "scheduler-0",
-        "--listen-address",
-        "0.0.0.0",
-        "--etcd-data-dir",
-        "/var/run/dapr/scheduler",
-        "--etcd-initial-cluster",
-        "scheduler-0=http://scheduler-0:2380",
-        "--port",
-        "50006",
-        "--override-broadcast-host-port",
-        "scheduler-0:50006",
-      ]
-    volumes:
-      - ./dapr_scheduler/0:/var/run/dapr/scheduler
-    networks:
-      - network
-    ports:
-      - "50006:50006"
-      - "2380:2380"
-
-  ############################
   # Chunk Sender (Caller) - Sends large payloads
   ############################
   chunk-sender:
@@ -63,8 +23,7 @@ services:
     ports:
       - "3502:3500" # Dapr HTTP port
       - "50003:50001" # Dapr gRPC port
-    command:
-      [
+    command: [
         "./daprd",
         "-app-id",
         "chunk-sender",
@@ -76,12 +35,8 @@ services:
         "3500",
         "-dapr-grpc-port",
         "50001",
-        "-placement-host-address",
-        "placement:50005",
-        "-scheduler-host-address",
-        "scheduler-0:50006",
-        "-resources-path",
-        "/components",
+        # "-resources-path",
+        # "/components",
         "-config",
         "/dapr-config/config.yml",
         "-log-level",
@@ -92,11 +47,6 @@ services:
     volumes:
       - "./components/:/components"
       - "./dapr-config/:/dapr-config"
-    depends_on:
-      placement:
-        condition: service_started
-      scheduler-0:
-        condition: service_started
     networks:
       - network
 
@@ -137,10 +87,6 @@ services:
         "3500",
         "-dapr-grpc-port",
         "50001",
-        "-placement-host-address",
-        "placement:50005",
-        "-scheduler-host-address",
-        "scheduler-0:50006",
         # "-resources-path",
         # "/components",
         "-config",
@@ -151,11 +97,6 @@ services:
     volumes:
       - "./components/:/components"
       - "./dapr-config/:/dapr-config"
-    depends_on:
-      placement:
-        condition: service_started
-      scheduler-0:
-        condition: service_started
     networks:
       - network
 
@@ -191,8 +132,7 @@ services:
     ports:
       - "3504:3500" # Dapr HTTP port (for debugging)
       - "50007:50001" # Dapr gRPC port
-    command:
-      [
+    command: [
         "./daprd",
         "-app-id",
         "nginx",
@@ -204,12 +144,8 @@ services:
         "3500",
         "-dapr-grpc-port",
         "50001",
-        "-placement-host-address",
-        "placement:50005",
-        "-scheduler-host-address",
-        "scheduler-0:50006",
-        "-resources-path",
-        "/components",
+        # "-resources-path",
+        # "/components",
         "-config",
         "/dapr-config/config.yml",
         "-log-level",
@@ -220,11 +156,6 @@ services:
     volumes:
       - "./components/:/components"
       - "./dapr-config/:/dapr-config"
-    depends_on:
-      placement:
-        condition: service_started
-      scheduler-0:
-        condition: service_started
     networks:
       - network
 
@@ -253,8 +184,7 @@ services:
     ports:
       - "3505:3500" # Dapr HTTP port (for debugging)
       - "50008:50001" # Dapr gRPC port
-    command:
-      [
+    command: [
         "./daprd",
         "-app-id",
         "file-generator",
@@ -266,12 +196,8 @@ services:
         "3500",
         "-dapr-grpc-port",
         "50001",
-        "-placement-host-address",
-        "placement:50005",
-        "-scheduler-host-address",
-        "scheduler-0:50006",
-        "-resources-path",
-        "/components",
+        # "-resources-path",
+        # "/components",
         "-config",
         "/dapr-config/config.yml",
         "-log-level",
@@ -282,11 +208,6 @@ services:
     volumes:
       - "./components/:/components"
       - "./dapr-config/:/dapr-config"
-    depends_on:
-      placement:
-        condition: service_started
-      scheduler-0:
-        condition: service_started
     networks:
       - network
 

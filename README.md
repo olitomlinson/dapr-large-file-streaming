@@ -6,41 +6,15 @@ Comprehensive analysis and test suite for HTTP chunked transfer encoding through
 
 ✅ **Dapr DOES support true streaming - Binary, JSON, and NDJSON all work efficiently**
 
-✅ **Key requirement: A "No-retry" resiliency policy must be applied(maxRetries: 0)**
-
 ✅ **Memory efficiency: 2-18% overhead (vs 220% with retries)**
 
 ✅ **All formats proven: Binary (50 MB/s), NDJSON (169K rec/s), JSON (72K rec/s)**
 
-✅ **Results: 90-99% memory reduction vs default retry behavior**
+✅ **Results: 90-99% memory reduction**
 
 ## Configuration (Simple)
 
-### 1. Create Resiliency Policy
-
-**File:** `components/resiliency-no-retry.yaml`
-
-```yaml
-apiVersion: dapr.io/v1alpha1
-kind: Resiliency
-metadata:
-  name: chunk-transfer-no-retry
-spec:
-  policies:
-    retries:
-      noRetries:
-        policy: constant
-        maxRetries: 0
-        duration: 0s
-  targets:
-    apps:
-      chunk-receiver:
-        retry: noRetries
-scopes:
-- chunk-sender
-```
-
-### 2. Configure max-body-size (For payloads > 4MB)
+### 1. Configure max-body-size (For payloads > 4MB)
 
 **File:** `docker-compose.yml`
 
@@ -151,8 +125,6 @@ The overhead percentage **drops dramatically** with larger payloads (18% → 2%)
 - ✅ **NDJSON:** 15-18% memory overhead, 169K records/sec (2.3x faster than JSON)
 - ✅ **JSON Array:** 18-21% memory overhead, 72K records/sec
 
-**All three formats achieve 90-99% memory savings with no-retry policy.**
-
 ### 2. Memory Efficiency IMPROVES with Size
 
 **Proof of true streaming:**
@@ -161,23 +133,9 @@ The overhead percentage **drops dramatically** with larger payloads (18% → 2%)
 
 This demonstrates that Dapr is NOT buffering but truly streaming data.
 
-### 3. A "No-Retry" Policy is Critical
+### 3. max-body-size Flag Requirement
 
-**Without "no-retry" policy:**
-- Dapr buffers 2-3x the payload size on the CALLER sidecar
-- Required to support request replay on failure
-- 100MB payload = ~220 MiB memory consumption
-- Does NOT scale for large files or concurrent uploads
-
-**With maxRetries: 0:**
-- True streaming enabled
-- Memory overhead: 2-18% of payload (decreases with size)
-- 1GB payload = only 22 MiB memory increase (2%)
-- Scales linearly for concurrent transfers
-
-### 4. max-body-size Flag Requirement
-
-**Critical:** The `-max-body-size` flag IS REQUIRED for payloads > 4MB, even with no-retry policy.
+**Critical:** The `-max-body-size` flag IS REQUIRED for payloads > 4MB.
 
 Default limit: 4MB (4,194,304 bytes)
 
@@ -185,7 +143,7 @@ Default limit: 4MB (4,194,304 bytes)
 
 **With flag:** Any payload size supported (tested up to 1GB)
 
-### 5. Chunked Transfer Encoding Works for All Formats
+### 4. Chunked Transfer Encoding Works for All Formats
 
 **Confirmed working:**
 - **Binary:** Raw bytes, maximum throughput (50-52 MB/s)
@@ -323,7 +281,6 @@ chunk-receiver (FastAPI:8002)
 
 ### High-Throughput Services (Memory Critical)
 
-✅ Use no-retry resiliency policy
 ✅ Set `-max-body-size` to accommodate largest expected payload
 ✅ Implement application-level retries if needed
 ✅ Monitor memory usage
@@ -333,7 +290,6 @@ chunk-receiver (FastAPI:8002)
 
 ### Critical Services (Reliability Critical)
 
-❌ Keep default retry policy
 ✅ Set `-max-body-size` high enough
 ✅ Ensure adequate memory: 3x largest payload
 ✅ Set memory limits and alerts
@@ -349,29 +305,6 @@ chunk-receiver (FastAPI:8002)
 ✅ Circuit breakers on all endpoints
 
 ## Configuration Reference
-
-### Resiliency Policy Options
-
-```yaml
-# No retries (streaming)
-spec:
-  policies:
-    retries:
-      noRetries:
-        maxRetries: 0
-
-# Limited retries (partial buffering)
-spec:
-  policies:
-    retries:
-      limitedRetry:
-        policy: constant
-        maxRetries: 2
-        duration: 5s
-
-# Default (full buffering)
-# No resiliency policy file = default Dapr retries active
-```
 
 ### max-body-size Values
 
@@ -390,12 +323,6 @@ spec:
 **Cause:** Payload exceeds `-max-body-size` limit (default 4MB)
 
 **Solution:** Add/increase `-max-body-size` on BOTH sidecars
-
-### High Memory Usage on Caller
-
-**Cause:** Retry policy active (default behavior)
-
-**Solution:** Create no-retry resiliency policy
 
 ### Transfer Fails at Exactly 4MB
 
@@ -439,7 +366,7 @@ docker exec dapr-large-file-streaming-chunk-receiver-1 \
 **Concurrent transfers:**
 - **Sub-linear memory scaling** (30.7% of expected!)
 - 10 concurrent = 5.49 MiB per transfer (vs 17.9 MiB single - 69% reduction!)
-- Memory saved: 97.5% vs retry policy (2,145 MiB saved)
+- Memory saved: 97.5%
 - Dapr efficiently multiplexes - memory per transfer DECREASES under load
 
 **Sequential transfers:**
